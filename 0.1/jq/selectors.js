@@ -151,7 +151,7 @@ $(document).ready(function(){
 
         if(player.seen.hammer==0){player.seen.hammer=1;}
 
-        if(prestige.galaxies>0){civ.counter*=1+prestige.galaxies;}
+        if(prestige.galaxies>0){civ.counter*=2+prestige.galaxies;}
         else{civ.counter*=2;}
 
         refreshUI();
@@ -164,7 +164,7 @@ $(document).ready(function(){
 
         if(player.seen.hammer2==0){player.seen.hammer2=1;}
 
-        civ.counter*=(prestige.galaxies-1)+civ.hammer2_factor;
+        civ.counter*=(prestige.galaxies)+civ.hammer2_factor;
 
         if(civ.hammer2_factor>0){civ.hammer2_factor--;}
 

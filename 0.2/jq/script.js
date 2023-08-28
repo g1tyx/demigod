@@ -1,5 +1,5 @@
-var version = "1";
-var savefile_name = "demigod_infinity"+version;
+var version = "0.2";
+var savefile_name = "demigod"+version;
 
 var debug_nosave=0;
 
@@ -20,12 +20,12 @@ var prestige = {
   offline:0,
   multiplier:1,
   all_time_counter:0,
-  universes:0,
-  omniverses:0
+  galaxies:0,
+  universes:0
 };
 var settings = {
   scientific:0,
-  audio_mute:1,
+  audio_mute:0,
   audio_volume:0.5
 }
 var civ = {};
@@ -36,19 +36,15 @@ const SYSTEMFRAME_MAX = 1e2;
 const EUROS_BASE_COST = 1e6;
 var nextEuroCost=0;
 var current_rate;
-var counter_rate=[0,0,0,0,0,0,0,0];
-var target=0;
-var planets_num;
-var solarsystems_num;
-var galaxies_num;
-var multiverse_num;
-var hyperverse_num;
+var galaxy_rate=[0,0,0];
+var target=100;
 var misc_settings={
   settings_toggle:0,
   save_del_confirm_toggle:0
 }
 var session_data={
   //session data is not saved
+  counter:0,
   main_loop:null,
   audio_initiated:0,
   click1:0,
@@ -74,7 +70,6 @@ function setupCiv(){
     counter:0,
     num:0,
     target:1e1,
-    target_factor:1,
     hammer:1,
     hammer2:1,
     hammer2_factor:0,
@@ -141,44 +136,30 @@ function buyRecalc(){
 };
 function rateCalc(){
 
-  planets_num=Math.floor(civ.num/10);
-  solarsystems_num=Math.floor(civ.num/100);
-  galaxies_num=Math.floor(civ.num/1000);
-  multiverse_num=Math.floor(prestige.universes/10);
-  hyperverse_num=Math.floor(prestige.universes/100);
-
-  target=getTarget();
-
   current_rate=1;
 
-  counter_rate[0]=0.1;
-  counter_rate[1]=0.5;
-  counter_rate[2]=Math.pow(2,solarsystems_num);
-  counter_rate[3]=Math.pow(100,galaxies_num);
-  counter_rate[4]=Math.pow(2,prestige.universes);
-  counter_rate[5]=Math.pow(3,multiverse_num);
-  counter_rate[6]=Math.pow(4,hyperverse_num);
+  target=(civ.target+civ.num)*Math.pow(1.95,prestige.galaxies);
 
-  current_rate*=1+counter_rate[0]*civ.num;
+  galaxy_rate[0]=0.1*civ.num;
+  galaxy_rate[1]=0.1*Math.floor(civ.num/10);
+  galaxy_rate[2]=Math.pow(2,Math.floor(civ.num/100));
 
-  current_rate*=1+counter_rate[1]*planets_num;
+  current_rate*=1+galaxy_rate[0];
 
-  current_rate*=counter_rate[2];
+  current_rate*=1+galaxy_rate[1];
 
-  current_rate*=counter_rate[3];
+  current_rate*=galaxy_rate[2];
 
-  current_rate*=counter_rate[4];
+  current_rate*=Math.pow(2,prestige.galaxies);
 
-  current_rate*=counter_rate[5];
+  current_rate*=Math.pow(2,prestige.universes);
 
-  current_rate*=counter_rate[6];
-
-  if(current_rate>target*100){
-    civ.target_factor*=1000;
-  }
-
-  if(galaxies_num>=10){
-    prestige.universes++;
+  if(current_rate>target){
+    prestige.galaxies++;
+    if(prestige.galaxies>=10){
+      prestige.galaxies=0;
+      prestige.universes++;
+    }
     setupCiv();
   }
   
@@ -205,38 +186,53 @@ function refreshUI(){
   }
 
   
-  if(session_data.main_loop==null){
-    titlemenu_block.show();
-    header.hide();
-    omniverse_block.hide();
-    multiverse_block.hide();
-    entities_block.hide();
-    return;
-  }else{
-    titlemenu_block.hide();
-    header.show();
-    omniverse_block.show();
-    multiverse_block.show();
-    entities_block.show();
-  }
 
 
 
   main_target_label.text('Target: ' + numT(target));
 
-  galaxy_title.html('<span class="civ'+(galaxies_num+1)+'">Galaxy '+romanize(galaxies_num+1)+'</span>');
+  universe_title.html('<span class="civ'+(prestige.galaxies+1)+'">Galaxy '+romanize(prestige.galaxies+1)+'</span>');
 
 
 
+  if(prestige.galaxies<0){hammer.hide();}
+  else{
 
+    hammer.show();
+    hammer.text('x'+(2+prestige.galaxies));
 
-  hammer.show();
-  hammer.html('x'+(2+galaxies_num)+'<hr><span class="tinier">'+(numT(target/(2+galaxies_num)))+'</span>');
-
-  if(civ.hammer==0){hammer.prop('disabled', true);}
-  else{hammer.prop('disabled', false);}
+    if(civ.hammer==0){hammer.prop('disabled', true);}
+    else{hammer.prop('disabled', false);}
+  }
 
   
+
+  if(prestige.galaxies<2){hammer2.hide();}
+  else{
+    hammer2.show();
+
+    if(civ.hammer2==0){hammer2.prop('disabled', true);}
+    else{hammer2.prop('disabled', false);}
+
+    hammer2.text('x'+((prestige.galaxies)+civ.hammer2_factor));
+
+
+  }
+
+  /*
+  if(prestige.galaxies<4){hammer3.hide();}
+  else{
+    hammer3.show();
+
+    if(civ.hammer3==0){hammer3.prop('disabled', true);}
+    else{hammer3.prop('disabled', false);}
+
+    hammer3.text('x'+((prestige.galaxies-1)+civ.hammer3_factor));
+
+
+  }
+  */
+  hammer3.hide();
 
 
 
@@ -244,7 +240,7 @@ function refreshUI(){
   else{
     entities_block.show();
 
-    galaxy_contributions_block.html('');
+    uni_contributions_block.html('');
 
     entities_list.html('');
 
@@ -252,7 +248,7 @@ function refreshUI(){
       entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Civilization '+romanize(i+1)+'</span><hr>+10%</button>');
     }
 
-    galaxy_contributions_block.append('Civilizations: <b>+'+numT(counter_rate[0]*100*civ.num)+'%</b>');
+    uni_contributions_block.append('Civilizations: <b>+'+numT(galaxy_rate[0]*100)+'%</b>');
 
 
 
@@ -260,11 +256,11 @@ function refreshUI(){
 
       entities_list.append('<br><br><br><br>');
 
-      for (let i = 0; i < planets_num%10; i++) {
-        entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Planet '+romanize(i+1)+'</span><hr>+'+numT(counter_rate[1]*100)+'%<hr>10 Civilizations</button>');
+      for (let i = 0; i < Math.floor(civ.num/10)%10; i++) {
+        entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Planet '+romanize(i+1)+'</span><hr>+10%<hr>10 Civilizations</button>');
       }
 
-      galaxy_contributions_block.append('<br>Planets: <b>+'+numT(counter_rate[1]*100*planets_num)+'%</b>');
+      uni_contributions_block.append('<br>Planets: <b>+'+numT(galaxy_rate[1]*100)+'%</b>');
 
     }
 
@@ -274,11 +270,11 @@ function refreshUI(){
 
       entities_list.append('<br><br><br><br>');
 
-      for (let i = 0; i < solarsystems_num%10; i++) {
-        entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Solar System '+romanize(i+1)+'</span><hr>x2<hr>10 Planets</button>');
+      for (let i = 0; i < Math.floor(civ.num/100); i++) {
+        entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Solar System '+romanize(i+1)+'</span><hr>x1.5<hr>10 Planets</button>');
       }
 
-      galaxy_contributions_block.append('<br>Solar Systems: <b>x'+numT(counter_rate[2])+'</b>');
+      uni_contributions_block.append('<br>Solar Systems: <b>x'+numT(galaxy_rate[2])+'</b>');
 
 
     }
@@ -286,79 +282,36 @@ function refreshUI(){
   }
 
   
-  if(civ.num>=1000 || prestige.universes>0){
-
-    multiverse_block.show();
-
-    uni_contributions_block.html('');
-
-    multiverse_title.html('<span class="civ'+(multiverse_num+1)+'">Multiverse '+romanize(multiverse_num%10+1)+'</span>');
-
-
-    verses_list.html('');
-
-    for (let i = 0; i < galaxies_num%10; i++) {
-      verses_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Galaxy '+romanize(i+1)+'</span><hr>x100</button>');
-    }
-
-    uni_contributions_block.append('Galaxies: <b>x'+numT(counter_rate[3])+'</b>');
-
-
-    if(prestige.universes>0){
-
-      verses_list.append('<br><br><br><br>');
-
-      for (let i = 0; i < prestige.universes%10; i++) {
-        verses_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Universe '+romanize(i+1)+'</span><hr>x2</button>');
-      }
-
-      uni_contributions_block.append('<br>Universes: <b>x'+numT(counter_rate[4])+'</b>');
-
-
-    }
-
-
-  }else{multiverse_block.hide();}
-
-
-  
-  if(prestige.universes<10){omniverse_block.hide();}
+  if(prestige.galaxies==0){galaxies_block.hide();}
   else{
 
-    omniverse_block.show();
-
-    omni_contributions_block.html('');
-
-    omniverse_title.html('<span class="civ'+(prestige.omniverses+1)+'">Omniverse '+romanize(prestige.omniverses+1)+'</span>');
+    galaxies_block.show();
 
 
-    omni_list.html('');
+    galaxies_list.html('');
 
-    for (let i = 0; i < multiverse_num; i++) {
-      omni_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Multiverse '+romanize(i+1)+'</span><hr>x3</button>');
-    }
-
-    omni_contributions_block.append('Multiverses: <b>x'+numT(counter_rate[5])+'</b>');
-
-
-    if(hyperverse_num>0){
-
-      omni_list.append('<br><br><br><br>');
-
-      for (let i = 0; i < hyperverse_num; i++) {
-        omni_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Hyperverse '+romanize(i+1)+'</span><hr>x4</button>');
-      }
-
-      omni_contributions_block.append('<br>Hyperverses: <b>x'+numT(counter_rate[6])+'</b>');
-
-
+    for (let i = 0; i < prestige.galaxies; i++) {
+      galaxies_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Galaxy '+romanize(i+1)+'</span><hr>x2</button>');
     }
 
 
   }
   
 
+  if(prestige.universes==0){universes_block.hide();}
+  else{
 
+    universes_block.show();
+
+
+    universes_list.html('');
+
+    for (let i = 0; i < prestige.universes; i++) {
+      universes_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Universe '+romanize(i+1)+'</span><hr>x2</button>');
+    }
+
+
+  }
 
 
   all_button1_tech=$(".button1_tech");
@@ -396,7 +349,25 @@ function loadGame(){
     civ=gameData.entities[0];
 
     //backwards compatibility (dev)
-    if(typeof prestige.omniverses === 'undefined'){prestige.omniverses=0;}
+    if(typeof civ.hammer2 === 'undefined'){civ.hammer2=1;}
+    if(typeof civ.hammer2_factor === 'undefined'){civ.hammer2_factor=0;}
+    if(typeof player.seen.hammer2 === 'undefined'){player.seen.hammer2=0;}
+
+    if(typeof civ.hammer3 === 'undefined'){civ.hammer3=1;}
+    if(typeof civ.hammer3_factor === 'undefined'){civ.hammer3_factor=0;}
+    if(typeof player.seen.hammer3 === 'undefined'){player.seen.hammer3=0;}
+
+    if(typeof prestige.galaxies === 'undefined'){
+
+      if(prestige.universes!=0){
+        prestige.galaxies=prestige.universes;
+        prestige.universes=0;
+      }else{
+        prestige.galaxies=0;
+      }
+      
+
+    }
 
 
     //offline progress
@@ -415,11 +386,6 @@ function delSave(){
 }
 
 
-function getTarget(){
-
-  return (civ.target+civ.num)*Math.pow(1.95,prestige.omniverses)*civ.target_factor;
-
-}
 function getPrices(base_price,growth_rate,current_amount){
 
   let all_prices=[0,0,0];

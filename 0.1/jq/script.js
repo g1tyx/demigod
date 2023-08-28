@@ -1,4 +1,4 @@
-var version = "0.1";
+var version = "0.2";
 var savefile_name = "demigod"+version;
 
 var debug_nosave=0;
@@ -138,11 +138,11 @@ function rateCalc(){
 
   current_rate=1;
 
-  target=(civ.target+civ.num)*Math.pow(1.9,prestige.galaxies);
+  target=(civ.target+civ.num)*Math.pow(1.95,prestige.galaxies);
 
-  galaxy_rate[0]=0.01*civ.num;
+  galaxy_rate[0]=0.1*civ.num;
   galaxy_rate[1]=0.1*Math.floor(civ.num/10);
-  galaxy_rate[2]=Math.pow(1.5,Math.floor(civ.num/100));
+  galaxy_rate[2]=Math.pow(2,Math.floor(civ.num/100));
 
   current_rate*=1+galaxy_rate[0];
 
@@ -193,20 +193,28 @@ function refreshUI(){
 
   universe_title.html('<span class="civ'+(prestige.galaxies+1)+'">Galaxy '+romanize(prestige.galaxies+1)+'</span>');
 
-  if(prestige.galaxies>0){hammer.text('x'+(1+prestige.galaxies));}
-  else{hammer.text('x2');}
 
-  if(civ.hammer==0){hammer.prop('disabled', true);}
-  else{hammer.prop('disabled', false);}
 
-  if(prestige.galaxies<3){hammer2.hide();}
+  if(prestige.galaxies<0){hammer.hide();}
+  else{
+
+    hammer.show();
+    hammer.text('x'+(2+prestige.galaxies));
+
+    if(civ.hammer==0){hammer.prop('disabled', true);}
+    else{hammer.prop('disabled', false);}
+  }
+
+  
+
+  if(prestige.galaxies<2){hammer2.hide();}
   else{
     hammer2.show();
 
     if(civ.hammer2==0){hammer2.prop('disabled', true);}
     else{hammer2.prop('disabled', false);}
 
-    hammer2.text('x'+((prestige.galaxies-1)+civ.hammer2_factor));
+    hammer2.text('x'+((prestige.galaxies)+civ.hammer2_factor));
 
 
   }
@@ -237,7 +245,7 @@ function refreshUI(){
     entities_list.html('');
 
     for (let i = 0; i < civ.num%10; i++) {
-      entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Civilization '+romanize(i+1)+'</span><hr>+1%</button>');
+      entities_list.append('<button class="button1_tech"><span class="civ'+(i+1)+'">Civilization '+romanize(i+1)+'</span><hr>+10%</button>');
     }
 
     uni_contributions_block.append('Civilizations: <b>+'+numT(galaxy_rate[0]*100)+'%</b>');
